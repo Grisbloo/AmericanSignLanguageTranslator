@@ -5,7 +5,7 @@
 import numpy as np
 import os
 
-# --- CONFIG ---
+# CONFIG (DON'T CHANGE THIS)
 action = input("Enter the letter folder to scan (e.g., A): ").upper()
 DATA_PATH = os.path.join('ASL_Dataset', action)
 
