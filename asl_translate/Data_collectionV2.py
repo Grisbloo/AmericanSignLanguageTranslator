@@ -169,8 +169,7 @@ for sequence in range(start_sequence, end_sequence):
                 sys.exit()
             
     # Saves to file location
-    # Once the loop hits 16 frames, save the 2D array as a .npy file))))))))))))))))))))))))))))))))))))))))))))))))))))?????
-
+    # Once the loop hits 16 frames, save the 2D array as a .npy file
     npy_path = os.path.join(DATA_PATH, action, str(sequence))
     np.save(npy_path, window.get_series())
 
