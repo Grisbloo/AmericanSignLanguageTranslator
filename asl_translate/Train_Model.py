@@ -1,4 +1,7 @@
-# python Train_Model.py to run
+# TL;DR This program takes data from ASL Dataset and uses the .npy landmarks to allow the LSTM to classify the different gestures into their respective alphabetical classes. The metrics that are used is validation
+# loss, training loss, and accuracy. The train_model.py is set to run 50 epochs, only stopping early when 10 epochs do not provide any further better metric. It then saves to best_asl_path to be used during Live.py's
+# deployment.
+
 
 import os
 import numpy as np
