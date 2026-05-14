@@ -1,3 +1,7 @@
+# TL;DR This program is the final showcasing and putting the model on display to use. It uses the path created in Train_Model.py to create a yolo26n.pt to use as the model it runs on. There is a HUD that displays
+# the confidence and the letter being signed. There is a yolo bounding box to hold in the person, mediapipe hands to provide the landmarking, and the LSTM to provide the classification with its own created path.
+# It also shows the user the landmarks of their hand. All the letters are available to sign.
+
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
@@ -11,13 +15,12 @@ import time
 import sys
 from ASL_Model import ASLSequenceInterpreter
 
-# --- CONFIGURATION ---
-# These MUST match exactly what you used in training!
+# CONFIGURATION
+# Available actions match training data 
 actions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-buffer = FrameBuffer(series_length=16) # This will hold our rolling window of frames
+buffer = FrameBuffer(series_length=16) # Holds rolling window of frames
 
 # Minimum confidence to display a prediction. Below this shows "..." instead.
-# Raise it if you're getting too many wrong guesses, lower it if it's too quiet.
 CONFIDENCE_THRESHOLD = 0.7
 
 # Only re-run YOLO every N frames. Reuses last box in between for speed.
@@ -25,9 +28,8 @@ YOLO_SKIP_FRAMES = 8
 sequence_length = 16
 
 
-# --- THREADED CAMERA READER ---
-# Same pattern as Data_Collection.py — reads frames in background so
-# the main loop never blocks waiting on the camera hardware.
+# THREADED CAMERA READER
+# Same pattern as Data_collection2.py — reads frames in background so the main loop never blocks waiting on the camera hardware.
 class CameraReader:
     def __init__(self, index=0):
         self.cap = cv2.VideoCapture(index)
@@ -67,7 +69,7 @@ def cleanup(cam):
     cv2.destroyAllWindows()
 
 
-# --- LOAD MODELS ---
+# Load Models (Yolo and Mediapipe)
 print("Loading YOLO...")
 yolo_model = YOLO('yolo26n.pt')
 
@@ -90,27 +92,27 @@ model.load_state_dict(torch.load('best_asl_model.pth', map_location=device))
 model.eval()
 
 
-# --- LIVE VARIABLES ---
+# Variables
 sequence = []                        # Rolling 16-frame window
-current_prediction = "..."           # What we show on screen
+current_prediction = "..."           # Guess of the letter
 current_confidence = 0.0             # Softmax confidence of that prediction
 last_box = None                      # Persisted YOLO box
 yolo_counter = 0                     # Frame counter for YOLO throttle
-last_good_keypoints = np.zeros(21 * 3) # Failsafe memory
+last_good_keypoints = np.zeros(21 * 3) # Failsafe (zeroes instead of a frozen frame since we can return to ... rather than a incorrect letter)
 
 
-# --- START CAMERA ---
+# Start Camera
 print("Starting camera...")
 cam = CameraReader(0)
 
-for _ in range(30):  # Wait up to 1.5s for first frame
+for _ in range(30):  # Wait up 1.5s for first frame
     if cam.read() is not None:
         break
     time.sleep(0.05)
 
 print("We are doing it live! Press ESC to quit.")
 
-# --- MAIN LOOP ---
+# Main Loop 
 while True:
     frame = cam.read()
     if frame is None:
@@ -119,13 +121,13 @@ while True:
     frame = cv2.flip(frame, 1)
     frame_h, frame_w, _ = frame.shape
 
-    # --- YOLO: throttled ---
+    # Throttled version of Yolo to improve frame rate
     if yolo_counter % YOLO_SKIP_FRAMES == 0:
         yolo_results = yolo_model(frame, imgsz=320, verbose=False)
         boxes = yolo_results[0].boxes
         if len(boxes) > 0:
             x1, y1, x2, y2 = map(int, boxes[0].xyxy[0])
-            # 20% padding so the hand isn't clipped at edges
+            # 20% padding to the bounding box to maintain hand in box
             bw, bh = x2 - x1, y2 - y1
             px, py = int(bw * 0.2), int(bh * 0.2)
             last_box = (
@@ -136,7 +138,7 @@ while True:
             last_box = None
     yolo_counter += 1
 
-    # --- MEDIAPIPE: every frame using persisted box ---
+    # MEDIAPIPE: every frame using persisted box to keep accuracy high
     keypoints = last_good_keypoints.copy()
 
     if last_box is not None:
@@ -155,27 +157,27 @@ while True:
                 hand_landmarks = mp_results.hand_landmarks[0]
                 extracted_points = []
                 
-                # 1. ESTABLISH THE FRAME'S ANCHOR (The Wrist)
+                # Set the Anchor
                 wrist = hand_landmarks[0]
-                # We need the wrist in global pixel coordinates first
+                # Wrist in global pixel coordinates
                 wrist_global_x = x1 + int(wrist.x * crop_w)
                 wrist_global_y = y1 + int(wrist.y * crop_h)
                 
                 # Normalize the wrist to screen scale (0 to 1)
                 wrist_norm_x = wrist_global_x / frame_w
                 wrist_norm_y = wrist_global_y / frame_h
-                wrist_z = wrist.z # MediaPipe Z is already relative to the wrist
+                wrist_z = wrist.z 
 
                 for landmark in hand_landmarks:
-                    # 2. GET CURRENT LANDMARK IN GLOBAL PIXELS
+                    # Turn landmarks into global
                     global_x = x1 + int(landmark.x * crop_w)
                     global_y = y1 + int(landmark.y * crop_h)
                     
-                    # 3. NORMALIZE TO SCREEN SCALE (0 to 1)
+                    # Normalize screen scale (0 to 1)
                     raw_norm_x = global_x / frame_w
                     raw_norm_y = global_y / frame_h
                     
-                    # 4. SUBTRACT THE ANCHOR (The Magic Fix)
+                    # Subtract the Anchor
                     # This makes the wrist ALWAYS (0,0,0). 
                     final_x = raw_norm_x - wrist_norm_x
                     final_y = raw_norm_y - wrist_norm_y
@@ -189,12 +191,12 @@ while True:
                 keypoints = np.array(extracted_points)
                 last_good_keypoints = keypoints # Update the failsafe memory
 
-    # --- ROLLING WINDOW ---
-    # Always use zeros when no hand found — honest signal to the LSTM
+    # Rolling Window
+    # Always use zeros when no hand found — honest signal to the LSTM (Allows ... to exist)
     sequence.append(keypoints)
     sequence = sequence[-sequence_length:]
 
-    # --- LSTM PREDICTION ---
+    # LSTM Prediction
     if len(sequence) == sequence_length:
         input_data = torch.tensor(np.array(sequence), dtype=torch.float32).unsqueeze(0).to(device)
 
@@ -212,7 +214,7 @@ while True:
                 # Model isn't sure enough — don't guess
                 current_prediction = "..."
 
-    # --- HUD ---
+    # HUD containing bounding box, confidence, letter, if there is hand or not
     cv2.rectangle(frame, (0, 0), (frame_w, 65), (0, 0, 0), -1)
 
     hand_status = "Hand: YES" if last_box is not None else "Hand: NO"
