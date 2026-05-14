@@ -1,3 +1,6 @@
+# TL:DR This program serves as the model for which the entire backbone of the ASL program runs off of. An LSTM (Long Short-Term Memory) receives the batches of .npy files and classes them down per video of letter.
+# It contains a 30% drop-out system is also implemented so it does not memorize the data.
+
 import torch
 import torch.nn as nn
 
@@ -15,9 +18,9 @@ class ASLSequenceInterpreter(nn.Module):
         # After the LSTM processes the sequence, we squish the data down to make a guess
         self.fc1 = nn.Linear(hidden_size, 64)
         self.relu = nn.ReLU() # Activation function (keeps the math non-linear)
-        self.dropout = nn.Dropout(0.3) # Prevents the AI from just memorizing the data
+        self.dropout = nn.Dropout(0.3) # Prevents the LSTM from just memorizing the data
         
-        # num_classes = how many letters you are training (e.g., 3 for A, B, C)
+       # 64 internal features squashed down to the 26 classes
         self.fc2 = nn.Linear(64, num_classes) 
 
     def forward(self, x):
