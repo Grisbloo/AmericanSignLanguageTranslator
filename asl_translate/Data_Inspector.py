@@ -1,3 +1,7 @@
+# TL;DR This program is designed purely as added feature to allow the devs to look at the data just to double check the Data_CorrectionV2 script, to make sure that good data isn't being thrown away. Able to take
+# entire folders of .npy files and check through them for unusable data (frozen frames and zeroes) along for the shape of the data if disproportionate. 
+# Prompts the user to run correction on them if there is issues in the dataset.
+
 import numpy as np
 import os
 
@@ -33,12 +37,12 @@ for filename in files:
         zero_frames = []
         frozen_frames = []
         
-        # Check 2: Pure Zeros (Complete failure to track from frame 0)
+        # Check 2: Pure Zeros (No data being recorded)
         for frame_num in range(data.shape[0]):
             if np.all(data[frame_num] == 0):
                 zero_frames.append(frame_num)
                 
-        # Check 3: Frozen Frames (The failsafe triggered mid-recording)
+        # Check 3: Frozen Frames (No data being recorded mid-collection)
         for i in range(1, data.shape[0]):
             if np.array_equal(data[i], data[i-1]):
                 frozen_frames.append(i)
@@ -57,7 +61,7 @@ for filename in files:
     except Exception as e:
         print(f"[{filename:^8}] ERROR - Could not read file: {e}")
 
-# --- SUMMARY STATISTICS ---
+# Summary of Read File(s)
 print("\n" + "="*45)
 print("FINAL BATCH SUMMARY")
 print("="*45)
