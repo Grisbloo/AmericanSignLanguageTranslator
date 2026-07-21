@@ -32,6 +32,11 @@ class FeatureExtractor():
         else:
             # Unfold the box to grab the coordinates
             x1, y1, x2, y2 = box
+            # Grab the size of the frame
+            frame_height, frame_width, _ = frame.shape
+            # Prevent the frame from going out of the screen
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(frame_width, x2), min(frame_height, y2)
             # Crop the image by the bounding box provided previously
             cropped_frame = frame[y1:y2, x1:x2]
             # CV operates as BGR not RGB, so the color conversion must apply

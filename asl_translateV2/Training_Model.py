@@ -15,6 +15,7 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
+from ASL_Model import ASLSequenceInterpreter
 
 class ASLDataset(Dataset):
     def __init__(self,datapath):
@@ -42,10 +43,20 @@ class ASLDataset(Dataset):
           numpy_data = np.load(file_path)
           tensor_data = torch.tensor(numpy_data, dtype = torch.float32)
           return (tensor_data, label)
-
-datapath = 'C:\Users\night\Desktop\AmericanSignLanguageTranslator\asl_translate\ASL_Dataset'
+    
+datapath = r'C:\Users\night\Desktop\AmericanSignLanguageTranslator\asl_translateV2\ASL_Dataset'
 dataset = ASLDataset(datapath)
 dataloader = DataLoader(dataset, batch_size=32, shuffle = True)
 model = ASLSequenceInterpreter()
 loss_function = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+for epochs in range(50):
+    for batch_data, batch_labels in dataloader:
+          optimizer.zero_grad()
+          predictions = model(batch_data)
+          loss = loss_function(predictions, batch_labels)
+          loss.backward()
+          optimizer.step()
+    print('Epoch num: ', epochs, 'Loss amount: ', loss.item())
+torch.save(model.state_dict(), 'Bestest_model.pth')

@@ -6,6 +6,7 @@
 # Return the predicted letter with confidence of prediction
 
 import torch
+import numpy as np
 from ASL_Model import ASLSequenceInterpreter
 
 class LSTM_Interfacer():
@@ -15,7 +16,7 @@ class LSTM_Interfacer():
         # Use the Model we have created prior
         self.model = ASLSequenceInterpreter()
         # Use the weights created from training
-        self.model.load_state_dict(torch.load('best_asl_model.pth'))
+        self.model.load_state_dict(torch.load('Bestest_model.pth'))
         # Use the model's evaluation mode so there is no dropout
         self.model.eval()
 
@@ -28,7 +29,7 @@ class LSTM_Interfacer():
         # If the LSTM's memory is 16 we can use it
         if len(self.LSTMMemory) == 16:
             # The LSTM needs a specific datatype 
-            input_tensor = torch.tensor(self.LSTMMemory, dtype=torch.float32)
+            input_tensor = torch.tensor(np.array(self.LSTMMemory), dtype=torch.float32)
             # Adds 1 to the batch number due to our program needing 3 things (Batch, Sequence, Features)
             input_tensor = input_tensor.unsqueeze(0)
             # Don't waste CPU power on learning due to a selected weighted path being used
