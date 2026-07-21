@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+*.task
+.env
+*.pt
+*.pth
+*.zip
+ASL_Dataset/*.npy
