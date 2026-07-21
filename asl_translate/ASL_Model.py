@@ -1,9 +1,3 @@
-"""
-ASL_Model.py
-TL:DR This program serves as the model for which the entire backbone of the ASL program runs off of. An LSTM (Long Short-Term Memory) receives the batches of .npy files and classes them down per video of letter.
-It contains a 30% drop-out system is also implemented so it does not memorize the data.
-"""
-
 import torch
 import torch.nn as nn
 
