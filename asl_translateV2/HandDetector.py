@@ -36,3 +36,6 @@ class HandDetector():
             # variable to make them bigger, + make sure it is an int to prevent CV from crashing while 
             # making the box
             return (int(x1 - Xpadding), int(y1 - Ypadding), int(x2 + Xpadding), int(y2 + Ypadding))
+
+            #x1, y1, x2, y2 = map(int, boxes[0].xyxy[0])
+            #return (x1, y1, x2, y2)   # no padding — matches how the dataset was actually collected

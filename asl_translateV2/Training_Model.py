@@ -16,6 +16,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 from ASL_Model import ASLSequenceInterpreter
+from torch.utils.data import random_split
 
 class ASLDataset(Dataset):
     def __init__(self,datapath):
@@ -46,17 +47,55 @@ class ASLDataset(Dataset):
     
 datapath = r'C:\Users\night\Desktop\AmericanSignLanguageTranslator\asl_translateV2\ASL_Dataset'
 dataset = ASLDataset(datapath)
-dataloader = DataLoader(dataset, batch_size=32, shuffle = True)
 model = ASLSequenceInterpreter()
 loss_function = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-for epochs in range(50):
+# Split into train/val (80/20)
+val_size = int(0.2 * len(dataset))
+train_size = len(dataset) - val_size
+train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
+dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+
+best_val_loss = float('inf')
+epochs_no_improve = 0
+patience = 10
+
+for epoch in range(50):
+    # Train
+    model.train()
     for batch_data, batch_labels in dataloader:
-          optimizer.zero_grad()
-          predictions = model(batch_data)
-          loss = loss_function(predictions, batch_labels)
-          loss.backward()
-          optimizer.step()
-    print('Epoch num: ', epochs, 'Loss amount: ', loss.item())
-torch.save(model.state_dict(), 'Bestest_model.pth')
+        optimizer.zero_grad()
+        predictions = model(batch_data)
+        loss = loss_function(predictions, batch_labels)
+        loss.backward()
+        optimizer.step()
+
+    # Validate
+    model.eval()
+    val_loss = 0.0
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for val_data, val_labels in val_dataloader:
+            val_predictions = model(val_data)
+            val_loss += loss_function(val_predictions, val_labels).item()
+            correct += (val_predictions.argmax(dim=1) == val_labels).sum().item()
+            total += val_labels.size(0)
+    val_loss /= len(val_dataloader)
+    val_accuracy = correct / total
+
+    print(f'Epoch: {epoch}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy*100:.1f}%')
+
+    # Checkpoint only if improved
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        epochs_no_improve = 0
+        torch.save(model.state_dict(), 'Bestest_model.pth')
+    else:
+        epochs_no_improve += 1
+        if epochs_no_improve >= patience:
+            print(f'Early stopping at epoch {epoch} (no improvement in {patience} epochs)')
+            break

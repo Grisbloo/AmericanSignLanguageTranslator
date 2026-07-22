@@ -26,9 +26,9 @@ class FeatureExtractor():
         self.detector = vision.HandLandmarker.create_from_options(options)
 
     def getfeature(self, frame, box):
-        if box == None:
+        if box is None:
             # Fill box with zeroes to prevent fatal errors and fill empty boxes with zeroes rather than crashing 
-            return np.zeros(63)
+            return None, None
         else:
             # Unfold the box to grab the coordinates
             x1, y1, x2, y2 = box
@@ -47,7 +47,7 @@ class FeatureExtractor():
             mp_results = self.detector.detect(mp_image)
             # If mp_results.hand_landmarks cannot find a hand provide the box with zeroes
             if not mp_results.hand_landmarks:
-                return np.zeros(63)
+                return None, None
             else:
                 # Grab the first available frame that contains a hand 
                 hand_landmarks = mp_results.hand_landmarks[0]
@@ -67,9 +67,11 @@ class FeatureExtractor():
                 # Wrist z
                 wrist_z = wrist.z
                 # For every other coordinate in landmarks
+                debug_points = []
                 for landmark in hand_landmarks:
                     global_x = x1 + int(landmark.x * crop_w)
                     global_y = y1 + int(landmark.y * crop_h)
+                    debug_points.append((global_x, global_y))
                     
                     # Normalize screen scale (0 to 1)
                     raw_norm_x = global_x / frame_w
@@ -83,5 +85,5 @@ class FeatureExtractor():
 
                     # Place the completed points into the created list
                     extracted_points.extend([final_x, final_y, final_z])
-                return np.array(extracted_points)
+                return np.array(extracted_points), debug_points
             

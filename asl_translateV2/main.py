@@ -17,7 +17,7 @@ from CameraReader import CameraReader
 from HandDetector import HandDetector
 from FeatureExtractor import FeatureExtractor
 from LSTM_Interfacer import LSTM_Interfacer
-
+import torch.nn.functional as F
 
 
 camming = CameraReader(source=1)
@@ -33,28 +33,38 @@ while True:
     # If we cannot find a frame, try again
     if frame is None:
         continue
+    ui_text = "No hand Found"
     # When a frame is found pass it to HandDetector to put a bounding box on it
     detected = detecting.get_box(frame)
-    # Don't crash if the box doesn't exist
-    if detecting.get_box is None: continue
-    # Pass the bounding box and the frame to the FeatureExtractor to get feature from it
-    extracted = extracting.getfeature(frame, detected)
-    # Don't crash if there could not be features found
-    if extracting.getfeature is None: continue
-    # Pass the extracted features to the LSTM_Interfacer to predict the gesture
-    predicted = interfacing.predict(extracted)
-    # Upon early frames and uncler frames, dont let the system crash
-    if predicted is None: continue
-    # Find the index of the highest score (index 0 for A, index 1 for B)
-    best_guess_index = torch.argmax(predicted).item()
-    # Translate tensor data into a letter that is understood by the alphabet
-    predicted_letter = alphabet[best_guess_index]
+    #Otherwise maintain ui_text
     if detected is not None:
-        x1, y1, x2, y2 = detected
+        x1, y1, x2, y2 = [int(v) for v in detected]
         cv2.rectangle(frame, (x1, y1), (x2,y2), (0,255,0), 2)
-        print("Predicted letter: ", predicted_letter)
-        cv2.putText(frame, predicted_letter, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2)
-
+        # Pass the bounding box and the frame to the FeatureExtractor to get feature from it
+        extracted, debug_points = extracting.getfeature(frame, detected)
+        # Don't crash if there could not be features found
+        if debug_points is not None:
+            for point in debug_points:
+                cv2.circle(frame,point, 4, (0,0,255), -1) 
+        if extracted is not None: 
+            ui_text = "Thinking"
+            # Pass the extracted features to the LSTM_Interfacer to predict the gesture
+            predicted = interfacing.predict(extracted)
+            # Upon early frames and unclear frames, dont let the system crash
+            if predicted is not None:
+                # Lets get readable confidence
+                # Mushes the numbers to go from 0-1
+                probabilities = F.softmax(predicted, dim=1)
+                # Find the index of the highest score (index 0 for A, index 1 for B)
+                best_guess_index = torch.argmax(predicted).item()
+                confidence = probabilities[0][best_guess_index].item()
+                if confidence > .7:
+                    predicted_letter = alphabet[best_guess_index]
+                    ui_text = f"Letter: {predicted_letter} (confidence: {confidence* 100:.1f}%)"
+                else:
+                    ui_text = "Low confidence"
+    # Ui Text static location
+    cv2.putText(frame, ui_text, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
     cv2.imshow('ASL Translator', frame)
     # Push Q to exit
     if cv2.waitKey(1) & 0xFF == ord('q'):

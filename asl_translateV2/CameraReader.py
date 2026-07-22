@@ -28,8 +28,8 @@ class CameraReader():
             success, frame = self.cap.read()
             #Can we find the frame? if not try again for the next frame
             if success == True:
-                #Provide us the found frame
-                self.frame = frame
+                #Provide us the found frame, flipped due to how the data was originally collected
+                self.frame = cv2.flip(frame, 1)
 
     def read(self):
         #Hand over the most recent frame

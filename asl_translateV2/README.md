@@ -1,5 +1,7 @@
 # Real-Time American Sign Language Translation Via YOLO26 and MediaPipe-Assisted Sequence
 
+Epoch: 29, Train Loss: 0.4239, Val Loss: 0.1663, Val Acc: 95.5%
+
 ## Teammates:
 - Lauren Anderson
 - Suchi Jain
