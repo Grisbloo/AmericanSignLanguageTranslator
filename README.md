@@ -1,6 +1,6 @@
 # Real-Time American Sign Language Translator (V2 Desktop)
 
-![ASL Translator Demo](AmericanSignLanguageTranslator/asl_translateV2/assets/ASLTranslator.gif)
+![ASL Translator Demo](asl_translateV2/assets/ASLTranslator.gif)
 
 *Model Performance — Epoch: 49, Train Loss: 0.03*
 
