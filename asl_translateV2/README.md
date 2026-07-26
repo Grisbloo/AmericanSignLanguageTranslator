@@ -1,81 +1,47 @@
-# Real-Time American Sign Language Translation Via YOLO26 and MediaPipe-Assisted Sequence
+# Real-Time American Sign Language Translator (V2 Desktop)
 
-Epoch: 29, Train Loss: 0.4239, Val Loss: 0.1663, Val Acc: 95.5%
+![ASL Translator Demo](https://github.com/user-attachments/assets/YOUR-GIF-LINK-HERE)
 
-## Teammates:
-- Lauren Anderson
-- Suchi Jain
-- Victor Runyan
-- Nicholas Ackley
+*Model Performance — Epoch: 49, Train Loss: 0.03*
 
-## Overview: 
-Our project builds a real-time American Sign Language (ASL) interpreter that converts hand gestures into letters, helping reduce the communication barrier between Deaf or Hard-of-Hearing individuals and people who do not know ASL.
+## Overview
+This project is a real-time American Sign Language (ASL) interpreter that converts hand gestures into text. It uses a multi-stage machine learning pipeline optimized for desktop environments:
 
-The system uses a multi-stage machine learning pipeline to accurately recognize ASL gestures from live video input. First, YOLO26 is used to detect the user’s hand in each frame and crop out unnecessary background noise. This helps isolate the gesture and improves recognition accuracy.
+1. **Object Detection:** A custom-trained YOLO model scans the webcam feed to isolate the user’s hand and crop out background noise.
+2. **Feature Extraction:** MediaPipe Hands processes the cropped frame into a 21-point skeletal representation, normalized to the wrist.
+3. **Temporal Classification:** A PyTorch Long Short-Term Memory (LSTM) network utilizes a 16-frame sliding window to analyze hand motion and classify the ASL letter (including dynamic gestures like J and Z).
 
-The cropped frames are then processed using MediaPipe Hands, which extracts a 21-point skeletal representation of the hand. These landmark points capture the structure and movement of the hand and serve as the input features for gesture recognition.
+The output is projected via a custom OpenCV state-machine UI for robust, real-time translation.
 
-Finally, the sequence of hand landmarks is passed into a Long Short-Term Memory (LSTM) neural network, which analyzes the temporal motion of the hand to classify the ASL letter being performed. The model supports recognition of all ASL alphabet letters, including dynamic gestures such as J and Z.
+## Installation & Setup
 
-The output is the predicted letter corresponding to the detected gesture, enabling real-time translation of ASL hand signs into text natively via hardware acceleration.
+**Requirements:** Python 3.10+, a webcam, and a Windows/Mac/Linux desktop.
 
----
-
-## Jetson Orin Edge Deployment Setup
-
-**Requirements:** Jetson Orin Nano/NX (JetPack 6.1), Python 3.10, native Ubuntu 22.04 terminal, a webcam.
-
-**1. System Level Dependencies**
-Install the necessary C++ image decoding libraries required by the ARM architecture:
+**1. Setup Virtual Environment**
 ```bash
-sudo apt-get update
-sudo apt-get install -y libjpeg-dev zlib1g-dev libpython3-dev libopenblas-dev libavcodec-dev libavformat-dev libswscale-dev
-```
+# Windows
+py -m venv venv
+.\venv\Scripts\activate
 
-**2. Create and Activate the Virtual Enviroment**
-Use standard Bash, not Windows PowerShell
-```bash
+# Mac/Linux
 python3 -m venv venv
 source venv/bin/activate
-python3 -m pip install --upgrade pip
 ```
-Never commit the venv/ folder. It is listed in .gitignore and should stay there.
 
-**3. Install the hardware-Accelerated ML Pipeline**
-
-Because we are deploying on NVIDIA ARM64 architecture, standard desktop pip packages will crash. Run the custom requirements file, which automatically bypasses security proxies to pull the Jetson AI Lab wheels and strict-locks the NumPy versions to prevent system conflicts.
+**2. Install Dependencies**
 ```bash
-pip3 install -r requirements.txt
+pip install opencv-python mediapipe ultralytics torch torchvision numpy
 ```
 
-**4. Download the MediaPipe landmarker Model**
+**3. Add Neural Network Weights**
+Place the following three files directly into the root directory of the project:
+* `best.pt` (Custom YOLO hand-tracking weights)
+* `hand_landmarker.task` (Official MediaPipe weights)
+* `Bestest_model.pth` (Custom trained LSTM weights)
+
+## Usage
+Run the live inference pipeline:
 ```bash
-wget https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task
+python main.py
 ```
-
-**5. Start the program**
-
-After having trained off of data, best_asl_model.pth will appear as a file
-```bash
-python3 Live.py
-```
-
-**Verified Hardware Stack**
-
-*Be aware that upgrading these packages will break the Jetson GPU pipeline*
-
-OS Architecture: Ubuntu 22.04 (JetPack 6.1 L4T)
-
-Python: 3.10
-
-PyTorch: 2.5.0a0 (NVIDIA natively compiled)
-
-TorchVision: 0.20.0 (Jetson AI Lab bypass)
-
-NumPy: 1.26.4 (STRICT LOCK: NumPy 2.x breaks ARM PyTorch)
-
-OpenCV: 4.9.0.80
-
-MediaPipe: 0.10.5
-
-Ultralytics (YOLO): 8.4.0
+*(Press 'q' while the webcam window is active to safely shut down the pipeline and release the camera).*
