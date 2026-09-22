@@ -2,6 +2,8 @@
 
 ![ASL Translator Demo](asl_translateV2/assets/ASLTranslator.gif)
 
+![Diagram](asl_translateV2/assets/ASLTranslatorGraph.png)
+
 *Model Performance — Epoch: 49, Train Loss: 0.03*
 
 ## Overview
